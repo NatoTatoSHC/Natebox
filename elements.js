@@ -18,7 +18,7 @@ var elements = {
     },
     smoke: {
         movement: [
-            ["0;1", "0;-1", "1;0", "-1;0"],
+            ["0;1", "0;-1", "-1;0", "1;0"],
             ["1;1", "1;-1", "-1;1", "-1;-1"]
         ],
         color: `rgb(78, 78, 78)`
@@ -43,6 +43,19 @@ var elements = {
     wood: {
         color: `rgb(103, 86, 55)`
     },
+    branch: {
+        color: `rgb(103, 86, 55)`,
+        grow: {
+            tick: {
+                min: 20,
+                max: 30
+            },
+            growth: ["branch", "leaves"]
+        }
+    },
+    leaves: {
+        color: `rgb(0, 255, 21)`
+    },
     steel: {
         color: `rgb(211, 211, 211)`
     },
@@ -60,7 +73,19 @@ var elements = {
         movement: behaviors.POWDER,
         color: `rgb(165, 165, 165)`
     },
-    glass: {},
+    glass: {
+        color: `rgb(147, 215, 255)`
+    },
+    bomb: {
+        color: `rgb(26, 97, 0)`,
+        movement: [
+            ["0;1"]
+        ],
+        explode: {
+            trigger: "impact",
+            size: 2
+        }
+    },
     corsaylium: {
         movement: [
             ["0;1"]

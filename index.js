@@ -91,6 +91,20 @@ function generateSelectors() {
 function toTitleCase(string) {
     return string[0].toUpperCase() + string.slice(1);
 }
+function isInGrid(x, y) {
+    if (grid[y] && grid [y][x]) {
+        return true;
+    } else {
+        return false;
+    }
+}
+function explode(x, y, size) {
+    for (let eY = -size; eY < size; i++) {
+        for (let eX = -size; eX < size; i++) {
+            alert(eX + ", " +eY);
+        }
+    }
+}
 
 //ERRORS
 
@@ -133,13 +147,41 @@ function update() {
                 }
             }
 
+            //Growth
+            let grow = elements[grid[y][x]].grow;
+            if (grow) {
+                let tick = grow.tick;
+                let rndTick = tick.min + Math.round(Math.random() * (tick.max - tick.min));
+                let picked = grow.growth[Math.floor(Math.random() * grow.growth.length)];
+                if ((iterations % rndTick) === 0) {
+                    let rndX = -1 + Math.floor(Math.random() * 3);
+                    let rndY = -1 + Math.floor(Math.random() * 3);
+                    let can = grid[y + rndY] && grid[y + rndY][x + rndX] && grid[y + rndY][x + rndX] == "air";
+                    if (can) {
+                        grid[y + rndY][x + rndX] = picked;
+                    }
+                }
+            }
+
+            //Explode
+            let explosion = elements[grid[y][x]].explode;
+            if (explosion) {
+                let trigger = explosion.trigger;
+                switch(trigger) {
+                    case 'impact':
+                        if (!isInGrid(x, y + 1) || (isInGrid(x, y + 1) && grid[y + 1][x] != "air")) {
+                            explode(x, y, explosion.size);
+                        }
+                        break;
+                }
+            }
+
             //Movement
             let movement = elements[grid[y][x]].movement;
             if (movement) for (p in movement) {
                 let priority = deepCopyArray(movement[p]);
-                let couldMove = true;
                 while (priority.length > 0) {
-                    let rndInd = Math.round(Math.random() * (priority.length - 1));
+                    let rndInd = Math.floor(Math.random() * (priority.length));
                     let instruction = priority[rndInd].split(";");
                     let xM = Number(instruction[0]);              //xM and yM stand for xMovement and yMovement
                     let yM = Number(instruction[1]);
