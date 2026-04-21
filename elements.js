@@ -7,10 +7,7 @@ var behaviors = {
 var elements = {
     air: {},
     sand: {
-        movement: [
-            ["0;1"],
-            ["1;1", "-1;1"]
-        ],
+        movement: behaviors.POWDER,
         color: `rgb(227, 220, 125)`
     },
     mud: {
@@ -31,7 +28,14 @@ var elements = {
             ["0;1"],
             ["1;1", "-1;1", "1;0", "-1;0"]
         ],
-        color: `rgb(21, 0, 255)`
+        color: `rgb(21, 0, 255)`,
+        reactions: [
+            {
+                cell: "0;1",
+                is: "concrete_powder",
+                replaceWith: "concrete"
+            }
+        ]
     },
     plastic: {
         color: `rgb(137, 137, 137)`
@@ -46,14 +50,11 @@ var elements = {
         color: `rgb(117, 117, 117)`
     },
     gravel: {
-        movement: [
-            ["0;1"],
-            ["1;1", "-1;1"]
-        ],
+        movement: behaviors.POWDER,
         color: `rgb(115, 115, 115)`
     },
     concrete: {
-        color: `rgb(152, 152, 152)`
+        color: `rgb(130, 130, 130)`
     },
     concrete_powder: {
         movement: behaviors.POWDER,

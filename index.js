@@ -20,6 +20,9 @@ var c = canvas.getContext("2d");
 //Init
 var grid = generateGrid();
 var selected = "sand";
+var clicking = false;
+var lastPos = {x: 0, y: 0};
+var iterations = 0;
 
 generateSelectors();
 
@@ -27,11 +30,16 @@ window.addEventListener("load", () => loop());
 
 //EVENTS
 canvas.addEventListener("mousedown", (e) => {
-    let y = Math.floor(e.offsetY / pixelSize);
-    let x = Math.floor(e.offsetX / pixelSize);
-    if ((y >= 0 && y <= gameParams.height / pixelSize - 1) && (x >= 0 && y <= gameParams.width / pixelSize - 1)) {
-        grid[y][x] = selected;
-    }
+    clicking = true;
+    lastPos.x = Math.floor(e.offsetX / pixelSize);
+    lastPos.y = Math.floor(e.offsetY / pixelSize);
+});
+canvas.addEventListener("mouseup", (e) => {
+    clicking = false;
+});
+canvas.addEventListener("mousemove", (e) => {
+    lastPos.y = Math.floor(e.offsetY / pixelSize);
+    lastPos.x = Math.floor(e.offsetX / pixelSize);
 });
 
 //FUNCTION
@@ -88,9 +96,10 @@ function toTitleCase(string) {
 
 //LOOP
 function loop() {
+    iterations++;
     update();
     draw();
-    setTimeout(loop, 1000 / 15)
+    setTimeout(loop, 1000 / 30)
 }
 
 //UPDATE
@@ -98,6 +107,31 @@ function update() {
     for (let y = grid.length - 1; y > -1; y--) {
         for (x in grid[y]) {
             x = Number(x);
+
+            if ((iterations % 2) === 0) {
+                if ((lastPos.y >= 0 && lastPos.y <= gameParams.height / pixelSize - 1) && (lastPos.x >= 0 && lastPos.x <= gameParams.width / pixelSize - 1) && clicking) {
+                    grid[lastPos.y][lastPos.x] = selected;
+                }
+            }
+
+            //Reactions
+            let reactions = elements[grid[y][x]].reactions;
+            if (reactions) {
+                for (r in reactions) {
+                    let reaction = reactions[r];
+                    let cell = reaction.cell;
+                    let coords = cell.split(";");
+                    coords = coords.map(item => {return Number(item);});
+                    let is = reaction.is;
+                    let replaceWith = reaction.replaceWith;
+                    if (grid[y + coords[1]] && grid[y + coords[1]][x + coords[0]] && grid[y + coords[1]][x + coords[0]] == is) {
+                        grid[y + coords[1]][x + coords[0]] = replaceWith;
+                        if (reaction.replaceSelf) {
+                            grid[y][x] = reaction.replaceSelf;
+                        }
+                    }
+                }
+            }
 
             //Movement
             let movement = elements[grid[y][x]].movement;
