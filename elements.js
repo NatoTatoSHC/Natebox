@@ -12,6 +12,11 @@ var behaviors = {
             ["1;1", "1;-1", "-1;1", "-1;-1"]
         ]
 }
+
+var seedGrowths = {
+    SHAFT: ["0;-1"]
+};
+
 var elements = {
     air: {category: "TOOL"},
     heat: {category: "TOOL", color: `rgb(255, 0, 0)`},
@@ -55,8 +60,6 @@ var elements = {
             cold: {},
             hot: {
                 100: "steam",
-                1000: "bomb",
-                10000: "nuke"
             }
         },
         density: 1
@@ -210,7 +213,16 @@ var elements = {
             }
         }
     },
-    sugercane_seed: {},
+    sugercane_seed: {
+        color: `rgb(24, 162, 0)`,
+        seed: {
+            type: seedGrowths.SHAFT,
+            maxGrowth: 5,
+            
+        },
+        category: "BIO",
+        state: "solid"
+    },
     charcoal: {
         state: "solid",
         category: "POWDERS",
