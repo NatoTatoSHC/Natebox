@@ -81,7 +81,7 @@ var elements = {
         category: "BIO",
         color: `rgb(103, 86, 55)`,
         flamable: .05,
-        coalChance: 5
+        coalChance: .5
     },
     branch: {
         state: "solid",
@@ -201,16 +201,9 @@ var elements = {
         state: "energy",
         category: "TOOL",
         color: `rgb(255, 170, 0)`,
-        density: 0,
         timeout: {
             min: 50,
             max: 200
-        },
-        spread: {
-            tick: {
-                min: 2,
-                max: 3
-            }
         }
     },
     sugercane_seed: {
