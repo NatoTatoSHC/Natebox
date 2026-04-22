@@ -13,16 +13,21 @@ const selectPage = document.getElementById("select");
 var canvas = document.createElement('canvas');
 canvas.width = gameParams.width;
 canvas.height = gameParams.height;
-canvas.style.border = "1px black solid";
+canvas.style.border = "1px gray solid";
+canvas.style.gridColumn = 1;
+canvas.style.gridRow = 1;
 document.body.append(canvas);
 var c = canvas.getContext("2d");
 
 //Init
-var grid = generateGrid();
+var grid = generateGrid("air");
+var timeGrid = generateGrid(0);
 var selected = "sand";
 var clicking = false;
 var lastPos = {x: 0, y: 0};
 var iterations = 0;
+var brushSize = 2;
+var hovering = false;
 
 generateSelectors();
 
@@ -40,6 +45,26 @@ canvas.addEventListener("mouseup", (e) => {
 canvas.addEventListener("mousemove", (e) => {
     lastPos.y = Math.floor(e.offsetY / pixelSize);
     lastPos.x = Math.floor(e.offsetX / pixelSize);
+});
+
+canvas.addEventListener("touchstart", (e) => {
+    clicking = true;
+    lastPos.x = Math.floor(e.offsetX / pixelSize);
+    lastPos.y = Math.floor(e.offsetY / pixelSize);
+});
+canvas.addEventListener("touchend", (e) => {
+    clicking = false;
+});
+canvas.addEventListener("touchmove", (e) => {
+    lastPos.y = Math.floor(e.offsetY / pixelSize);
+    lastPos.x = Math.floor(e.offsetX / pixelSize);
+});
+canvas.addEventListener("wheel", (e) => {
+    if (e.deltaY < 0) {
+        changeSize(1);
+    } else if (e.deltaY > 0) {
+        changeSize(-1);
+    }
 });
 
 //FUNCTION
@@ -69,8 +94,8 @@ function copyArray(array) {
 function deepCopyArray(array) {
     return array.map(item => {return item.slice();});
 }
-function generateGrid() {
-    let widths = repeatArray(["air"], gameParams.width / pixelSize);
+function generateGrid(str) {
+    let widths = repeatArray([str], gameParams.width / pixelSize);
     let ret = arrayArray(widths, gameParams.height / pixelSize);
     return ret;
 }
@@ -85,7 +110,9 @@ function generateSelectors() {
         button.innerText = toTitleCase(elemN);
         button.style.backgroundColor = elem.color;
         
-        selectPage.append(button);
+        if (elem.category) {
+            document.querySelector(`#${selectPage.id} #${elem.category}`).append(button);
+        }
     });
 }
 function toTitleCase(string) {
@@ -99,10 +126,19 @@ function isInGrid(x, y) {
     }
 }
 function explode(x, y, size) {
-    for (let eY = -size; eY < size; i++) {
-        for (let eX = -size; eX < size; i++) {
-            alert(eX + ", " +eY);
+    for (let eY = -size; eY < size + 1; eY++) {
+        for (let eX = -size; eX < size + 1; eX++) {
+            let distance = Math.abs(eX) + Math.abs(eY);
+            if (distance <= size && isInGrid(x + eX, y + eY)) {
+                grid[y + eY][x + eX] = "air";
+                timeGrid[y + eY][x + eX] = 0;
+            }
         }
+    }
+}
+function changeSize(by) {
+    if (brushSize + by > -1) {
+        brushSize += by;
     }
 }
 
@@ -118,89 +154,166 @@ function loop() {
 
 //UPDATE
 function update() {
-    for (let y = grid.length - 1; y > -1; y--) {
-        for (x in grid[y]) {
-            x = Number(x);
-
-            if ((iterations % 2) === 0) {
-                if ((lastPos.y >= 0 && lastPos.y <= gameParams.height / pixelSize - 1) && (lastPos.x >= 0 && lastPos.x <= gameParams.width / pixelSize - 1) && clicking) {
-                    grid[lastPos.y][lastPos.x] = selected;
+    //Draw
+    if ((iterations % 2) === 0) {
+        if (clicking) {
+            for (let y = -brushSize; y < brushSize + 1; y++) {
+                for (let x = -brushSize; x < brushSize + 1; x++) {
+                    let pixelPosX = lastPos.x + x;
+                    let pixelPosY = lastPos.y + y;
+                    if (isInGrid(pixelPosX, pixelPosY)) {
+                        grid[pixelPosY][pixelPosX] = selected;
+                        timeGrid[pixelPosY][pixelPosX] = 0;
+                    }
                 }
             }
+        }
+    }
 
-            //Reactions
-            let reactions = elements[grid[y][x]].reactions;
-            if (reactions) {
-                for (r in reactions) {
-                    let reaction = reactions[r];
-                    let cell = reaction.cell;
-                    let coords = cell.split(";");
-                    coords = coords.map(item => {return Number(item);});
-                    let is = reaction.is;
-                    let replaceWith = reaction.replaceWith;
-                    if (grid[y + coords[1]] && grid[y + coords[1]][x + coords[0]] && grid[y + coords[1]][x + coords[0]] == is) {
+    for (let y = grid.length - 1; y > -1; y--) {
+        let xDir = Math.random() < 0.5 ? -1: 1;
+        if (xDir == 1) {
+            for (let x = 0; x < grid[y].length; x++) {
+                cellUpdate(x, y);
+            }
+        } else {
+            for (let x = grid[y].length - 1; x > -1; x--) {
+                cellUpdate(x, y);
+            }
+        }
+    }
+}
+
+function cellUpdate(x, y) {
+    //Reactions
+    let reactions = elements[grid[y][x]].reactions;
+    if (reactions) {
+        for (r in reactions) {
+            let reaction = reactions[r];
+            let is = reaction.is;
+            let replaceWith = reaction.replaceWith;
+            for (let reactY = -1; reactY < 2; reactY += 2) {
+                for (let reactX = -1; reactX < 2; reactX += 2) {
+                    let coords = [reactX, reactY];
+                    if (isInGrid(x + coords[0], y + coords[1]) && grid[y + coords[1]][x + coords[0]] == is) {
                         grid[y + coords[1]][x + coords[0]] = replaceWith;
+                        timeGrid[y + coords[1]][x + coords[0]] = 0;
                         if (reaction.replaceSelf) {
                             grid[y][x] = reaction.replaceSelf;
+                            timeGrid[y][x] = 0;
                         }
                     }
                 }
             }
+        }
+    }
 
-            //Growth
-            let grow = elements[grid[y][x]].grow;
-            if (grow) {
-                let tick = grow.tick;
-                let rndTick = tick.min + Math.round(Math.random() * (tick.max - tick.min));
-                let picked = grow.growth[Math.floor(Math.random() * grow.growth.length)];
-                if ((iterations % rndTick) === 0) {
-                    let rndX = -1 + Math.floor(Math.random() * 3);
-                    let rndY = -1 + Math.floor(Math.random() * 3);
-                    let can = grid[y + rndY] && grid[y + rndY][x + rndX] && grid[y + rndY][x + rndX] == "air";
-                    if (can) {
-                        grid[y + rndY][x + rndX] = picked;
-                    }
+    //Growth
+    let grow = elements[grid[y][x]].grow;
+    if (grow) {
+        let tick = grow.tick;
+        let rndTick = tick.min + Math.round(Math.random() * (tick.max - tick.min));
+        let picked = grow.growth[Math.floor(Math.random() * grow.growth.length)];
+        if ((iterations % rndTick) === 0) {
+            let rndX = -1 + Math.floor(Math.random() * 3);
+            let rndY = -1 + Math.floor(Math.random() * 3);
+            let can = grid[y + rndY] && grid[y + rndY][x + rndX] && grid[y + rndY][x + rndX] == "air";
+            if (can) {
+                grid[y + rndY][x + rndX] = picked;
+                timeGrid[y + rndY][x + rndX] = 0;
+            }
+        }
+    }
+
+    //Explode
+    let explosion = elements[grid[y][x]].explode;
+    if (explosion) {
+        let trigger = explosion.trigger;
+        switch(trigger) {
+            case 'impact':
+                if (!isInGrid(x, y + 1) || (isInGrid(x, y + 1) && grid[y + 1][x] != "air")) {
+                    explode(x, y, explosion.size);
+                }
+                break;
+        }
+    }
+
+    //Timeout
+    let timeout = elements[grid[y][x]].timeout;
+    if (timeout) {
+        timeGrid[y][x]++;
+        if (timeGrid[y][x] >= timeout.min + Math.round(Math.random() * (timeout.max - timeout.min))) {
+            grid[y][x] = "air";
+            timeGrid[y][x] = 0;
+        }
+    }
+
+    //Spread
+    let spread = elements[grid[y][x]].spread;
+    if (spread) {
+        
+    }
+
+    //Movement
+    let movement = elements[grid[y][x]].movement;
+    if (movement) for (p in movement) {
+        let priority = deepCopyArray(movement[p]);
+        while (priority.length > 0) {
+            let rndInd = Math.floor(Math.random() * (priority.length));
+            let instruction = priority[rndInd].split(";");
+            let xM = Number(instruction[0]);              //xM and yM stand for xMovement and yMovement
+            let yM = Number(instruction[1]);
+            
+            let nx = x + xM;
+            let ny = y + yM;
+            if (elements[grid[y][x]].state == "gas") {
+                if (!isInGrid(nx - 1, 0)) {
+                    nx += 2;
+                } else if (!isInGrid(nx + 1, 0)) {
+                    nx -= 2;
+                }
+                if (!isInGrid(0, ny - 1)) {
+                    ny += 2;
+                } else if (!isInGrid(0, ny + 1)) {
+                    ny -= 2;
                 }
             }
+            if (
+                ny >= 0 && ny < gameParams.height / pixelSize &&
+                nx >= 0 && nx < gameParams.width / pixelSize &&
+                grid[ny][nx] === "air"
+            ) {
+                grid[ny][nx] = grid[y][x];
+                timeGrid[ny][nx] = 0;
 
-            //Explode
-            let explosion = elements[grid[y][x]].explode;
-            if (explosion) {
-                let trigger = explosion.trigger;
-                switch(trigger) {
-                    case 'impact':
-                        if (!isInGrid(x, y + 1) || (isInGrid(x, y + 1) && grid[y + 1][x] != "air")) {
-                            explode(x, y, explosion.size);
-                        }
-                        break;
+                grid[y][x] = "air";
+                timeGrid[y][x] = 0;
+                
+                break; // stop after moving once
+            } else if (
+                ny >= 0 && ny < gameParams.height / pixelSize &&
+                nx >= 0 && nx < gameParams.width / pixelSize &&
+                elements[grid[ny][nx]].density < elements[grid[y][x]].density
+            ) {
+                if (elements[grid[ny][nx]].state == "liquid" && elements[grid[y][x]].state == "liquid" && (iterations % 4) === 0) {
+                    let thisElem = grid[y][x];
+                    grid[y][x] = grid[ny][nx];
+                    timeGrid[y][x] = 0;
+
+                    grid[ny][nx] = thisElem;
+                    timeGrid[ny][nx] = 0;
+                    break;
+                } else if (elements[grid[y][x]].state != "liquid" && (iterations % 3) === 0) {
+                    let thisElem = grid[y][x];
+                    grid[y][x] = grid[ny][nx];
+                    timeGrid[y][x] = 0;
+
+                    grid[ny][nx] = thisElem;
+                    timeGrid[ny][nx] = 0;
+                    break;
                 }
             }
-
-            //Movement
-            let movement = elements[grid[y][x]].movement;
-            if (movement) for (p in movement) {
-                let priority = deepCopyArray(movement[p]);
-                while (priority.length > 0) {
-                    let rndInd = Math.floor(Math.random() * (priority.length));
-                    let instruction = priority[rndInd].split(";");
-                    let xM = Number(instruction[0]);              //xM and yM stand for xMovement and yMovement
-                    let yM = Number(instruction[1]);
-                    
-                    let nx = x + xM;
-                    let ny = y + yM;
-
-                    if (
-                        ny >= 0 && ny < gameParams.height / pixelSize &&
-                        nx >= 0 && nx < gameParams.width / pixelSize &&
-                        grid[ny][nx] === "air"
-                    ) {
-                        grid[ny][nx] = grid[y][x];
-                        grid[y][x] = "air";
-                        break; // stop after moving once
-}
-                    priority.splice(rndInd, 1);
-                }
-            }
+            priority.splice(rndInd, 1);
         }
     }
 }
@@ -208,15 +321,30 @@ function update() {
 //DRAW
 function draw() {
     c.clearRect(0, 0, gameParams.width, gameParams.height)
+    c.fillStyle = "black";
+    c.fillRect(0, 0, gameParams.width, gameParams.height);
     for (y in grid) {
         for (x in grid[y]) {
             let color = elements[grid[y][x]].color;
             if (color == "clear") {} else {
                 if (color) {
+                    if (elements[grid[y][x]].state == "gas") {
+                        const match = color.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([0-9.]+))?\s*\)/i);
+                        if (!match) continue;
+                        let r = match[1];
+                        let g = match[2];
+                        let b = match[3];
+                        c.fillStyle = `rgba(${r}, ${g}, ${b}, 0.5)`;
+                        c.fillRect((x - .5) * pixelSize, (y - .5) * pixelSize, pixelSize * 2, pixelSize * 2);
+                    }
                     c.fillStyle = color;
                     c.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
                 }
             }
         }
     }
+
+    //Outline
+    c.strokeStyle = `rgba(255, 255, 255, 0.43)`;
+    c.strokeRect((lastPos.x - brushSize) * pixelSize, (lastPos.y - brushSize) * pixelSize, (brushSize * 2 + 1) * pixelSize, (brushSize * 2 + 1) * pixelSize);
 }
