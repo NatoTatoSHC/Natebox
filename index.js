@@ -34,7 +34,7 @@ mods.forEach(async (mod) => {
 //Init
 var grid = generateGrid("air");
 var timeGrid = generateGrid(0);
-var tempGrid = generateGrid([20, false]);
+var tempGrid = generateGrid([20, false, 0]);
 var selected = "sand";
 var clicking = false;
 var lastPos = {x: 0, y: 0};
@@ -88,7 +88,7 @@ function repeatArray(array, count) {
     let output = [];
     for(let i = 0; i < count; i++) {
         for (item in array) {
-            output.push(array[item]);
+            output.push(JSON.parse(JSON.stringify(array[item])));
         }
     }
     return output;
@@ -147,7 +147,7 @@ function explode(x, y, size) {
             if (distance <= size && isInGrid(x + eX, y + eY)) {
                 grid[y + eY][x + eX] = "air";
                 timeGrid[y + eY][x + eX] = 0;
-                tempGrid[y + eY][x + eX][0] = 20;
+                tempGrid[y + eY][x + eX][0] =  ;
             }
         }
     }
@@ -355,11 +355,11 @@ function cellUpdate(x, y) {
             ) {
                 grid[ny][nx] = grid[y][x];
                 timeGrid[ny][nx] = 0;
-                tempGrid[ny][nx][0] = tempGrid[y][x][0];
+                tempGrid[ny][nx] = tempGrid[y][x];
 
                 grid[y][x] = "air";
                 timeGrid[y][x] = 0;
-                tempGrid[y][x][0] = 20;
+                tempGrid[y][x] = [20, false];
                 
                 break; // stop after moving once
             } else if (
@@ -369,25 +369,25 @@ function cellUpdate(x, y) {
             ) {
                 if (elements[grid[ny][nx]].state == "liquid" && elements[grid[y][x]].state == "liquid" && (iterations % 4) === 0) {
                     let thisElem = grid[y][x];
-                    let thisTemp = tempGrid[y][x][0];
+                    let thisTemp = tempGrid[y][x];
                     grid[y][x] = grid[ny][nx];
                     timeGrid[y][x] = 0;
-                    tempGrid[y][x][0] = tempGrid[ny][nx][0];
+                    tempGrid[y][x] = tempGrid[ny][nx];
 
                     grid[ny][nx] = thisElem;
                     timeGrid[ny][nx] = 0;
-                    tempGrid[ny][nx][0] = thisTemp;
+                    tempGrid[ny][nx] = thisTemp;
                     break;
                 } else if ((elements[grid[y][x]].state != "liquid" || elements[grid[ny][nx]].state != "liquid") && (iterations % 2) === 0) {
                     let thisElem = grid[y][x];
-                    let thisTemp = tempGrid[y][x][0];
+                    let thisTemp = tempGrid[y][x];
                     grid[y][x] = grid[ny][nx];
                     timeGrid[y][x] = 0;
-                    tempGrid[y][x][0] = tempGrid[ny][nx][0];
+                    tempGrid[y][x] = tempGrid[ny][nx];
 
                     grid[ny][nx] = thisElem;
                     timeGrid[ny][nx] = 0;
-                    tempGrid[ny][nx][0] = thisTemp;
+                    tempGrid[ny][nx] = thisTemp;
                     break;
                 }
             }
