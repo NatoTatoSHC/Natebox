@@ -1,7 +1,7 @@
 //CONSTS
 const gameParams = {
-    width: 800,
-    height: 400
+    width: 850,
+    height: 560
 };
 const pixelSize = 10;
 
@@ -19,9 +19,22 @@ canvas.style.gridRow = 1;
 document.body.append(canvas);
 var c = canvas.getContext("2d");
 
+//Mods
+if (!localStorage.getItem("mods")) {
+    localStorage.setItem("mods", JSON.stringify([]));
+}
+var mods = JSON.parse(localStorage.getItem("mods"));
+mods.forEach(async (mod) => {
+    let res = await fetch(mod);
+    if (!res.ok) return;
+    let txt = await res.text();
+    eval(txt);
+});
+
 //Init
 var grid = generateGrid("air");
 var timeGrid = generateGrid(0);
+var tempGrid = generateGrid(20);
 var selected = "sand";
 var clicking = false;
 var lastPos = {x: 0, y: 0};
@@ -45,6 +58,9 @@ canvas.addEventListener("mouseup", (e) => {
 canvas.addEventListener("mousemove", (e) => {
     lastPos.y = Math.floor(e.offsetY / pixelSize);
     lastPos.x = Math.floor(e.offsetX / pixelSize);
+});
+canvas.addEventListener("mouseleave", (e) => {
+    clicking = false;
 });
 
 canvas.addEventListener("touchstart", (e) => {
@@ -119,11 +135,10 @@ function toTitleCase(string) {
     return string[0].toUpperCase() + string.slice(1);
 }
 function isInGrid(x, y) {
-    if (grid[y] && grid [y][x]) {
-        return true;
-    } else {
-        return false;
-    }
+    return y >= 0 &&
+           y < grid.length &&
+           x >= 0 &&
+           x < grid[0].length;
 }
 function explode(x, y, size) {
     for (let eY = -size; eY < size + 1; eY++) {
@@ -132,6 +147,7 @@ function explode(x, y, size) {
             if (distance <= size && isInGrid(x + eX, y + eY)) {
                 grid[y + eY][x + eX] = "air";
                 timeGrid[y + eY][x + eX] = 0;
+                tempGrid[y + eY][x + eX] = 20;
             }
         }
     }
@@ -161,9 +177,27 @@ function update() {
                 for (let x = -brushSize; x < brushSize + 1; x++) {
                     let pixelPosX = lastPos.x + x;
                     let pixelPosY = lastPos.y + y;
-                    if (isInGrid(pixelPosX, pixelPosY)) {
-                        grid[pixelPosY][pixelPosX] = selected;
-                        timeGrid[pixelPosY][pixelPosX] = 0;
+                    if (["heat", "drink"].includes(selected)) {
+                        if (isInGrid(pixelPosX, pixelPosY)) {
+                            switch(selected) {
+                                case 'heat':
+                                    tempGrid[pixelPosY][pixelPosX] += 2;
+                                    break;
+                                case 'drink':
+                                    if (elements[grid[pixelPosY][pixelPosX]].state == "liquid") {
+                                        grid[pixelPosY][pixelPosX] = "air";
+                                        timeGrid[pixelPosY][pixelPosX] = 0;
+                                        tempGrid[pixelPosY][pixelPosX] = 20;
+                                    }
+                                    break;
+                            }
+                        }
+                    } else {
+                        if (isInGrid(pixelPosX, pixelPosY) && grid[pixelPosY][pixelPosX] != selected) {
+                            grid[pixelPosY][pixelPosX] = selected;
+                            timeGrid[pixelPosY][pixelPosX] = 0;
+                            tempGrid[pixelPosY][pixelPosX] = 20;
+                        }
                     }
                 }
             }
@@ -201,6 +235,7 @@ function cellUpdate(x, y) {
                         if (reaction.replaceSelf) {
                             grid[y][x] = reaction.replaceSelf;
                             timeGrid[y][x] = 0;
+                            tempGrid[y][x] = 20;
                         }
                     }
                 }
@@ -217,10 +252,11 @@ function cellUpdate(x, y) {
         if ((iterations % rndTick) === 0) {
             let rndX = -1 + Math.floor(Math.random() * 3);
             let rndY = -1 + Math.floor(Math.random() * 3);
-            let can = grid[y + rndY] && grid[y + rndY][x + rndX] && grid[y + rndY][x + rndX] == "air";
+            let can = isInGrid(x + rndX, y + rndY) && grid[y + rndY][x + rndX] == "air";
             if (can) {
                 grid[y + rndY][x + rndX] = picked;
                 timeGrid[y + rndY][x + rndX] = 0;
+                tempGrid[y + rndY][x + rndX] = 20;
             }
         }
     }
@@ -238,6 +274,20 @@ function cellUpdate(x, y) {
         }
     }
 
+    //Tempature Coverts
+    let converts = elements[grid[y][x]].converts;
+    if (converts) {
+        let hots = Object.keys(converts.hot);
+        hots.sort((a, b) => b - a);
+        for (t in hots) {
+            let temp = hots[t];
+            if (tempGrid[y][x] >= temp) {
+                grid[y][x] = converts.hot[temp];
+                break;
+            }
+        };
+    }
+
     //Timeout
     let timeout = elements[grid[y][x]].timeout;
     if (timeout) {
@@ -245,13 +295,31 @@ function cellUpdate(x, y) {
         if (timeGrid[y][x] >= timeout.min + Math.round(Math.random() * (timeout.max - timeout.min))) {
             grid[y][x] = "air";
             timeGrid[y][x] = 0;
+            tempGrid[y][x] = 20;
         }
     }
 
     //Spread
     let spread = elements[grid[y][x]].spread;
-    if (spread) {
-        
+    if (spread && grid[y][x] == "fire") {
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                //set fire,(())/ fire animation
+                if(isInGrid(x + dx, y + dy)) {
+                    if (elements[grid[y + dy][x + dx]].flamable && (iterations % (spread.tick.min + Math.round(Math.random() * (spread.tick.max - spread.tick.min)))) === 0) {
+                        if (Math.random() < elements[grid[y + dy][x + dx]].flamable) {
+                            if (isInGrid(x + dx, y + dy + 1) && elements[grid[y + dy][x + dx]].coalChance && Math.random() < elements[grid[y + dy][x + dx]].coalChance) {
+                                grid[y + dy + 1][x + dx] = "charcoal",
+                                timeGrid[y + dy + 1][x + dx] = 0;
+                                tempGrid[y + dy + 1][x + dx] = 20;
+                            }
+                            grid[y + dy][x + dx] = "fire";
+                            timeGrid[y + dy][x + dx] = 0;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     //Movement
@@ -285,9 +353,11 @@ function cellUpdate(x, y) {
             ) {
                 grid[ny][nx] = grid[y][x];
                 timeGrid[ny][nx] = 0;
+                tempGrid[ny][nx] = tempGrid[y][x];
 
                 grid[y][x] = "air";
                 timeGrid[y][x] = 0;
+                tempGrid[y][x] = 20;
                 
                 break; // stop after moving once
             } else if (
@@ -297,19 +367,25 @@ function cellUpdate(x, y) {
             ) {
                 if (elements[grid[ny][nx]].state == "liquid" && elements[grid[y][x]].state == "liquid" && (iterations % 4) === 0) {
                     let thisElem = grid[y][x];
+                    let thisTemp = tempGrid[y][x];
                     grid[y][x] = grid[ny][nx];
                     timeGrid[y][x] = 0;
+                    tempGrid[y][x] = tempGrid[ny][nx];
 
                     grid[ny][nx] = thisElem;
                     timeGrid[ny][nx] = 0;
+                    tempGrid[ny][nx] = thisTemp;
                     break;
-                } else if (elements[grid[y][x]].state != "liquid" && (iterations % 3) === 0) {
+                } else if ((elements[grid[y][x]].state != "liquid" || elements[grid[ny][nx]].state != "liquid") && (iterations % 2) === 0) {
                     let thisElem = grid[y][x];
+                    let thisTemp = tempGrid[y][x];
                     grid[y][x] = grid[ny][nx];
                     timeGrid[y][x] = 0;
+                    tempGrid[y][x] = tempGrid[ny][nx];
 
                     grid[ny][nx] = thisElem;
                     timeGrid[ny][nx] = 0;
+                    tempGrid[ny][nx] = thisTemp;
                     break;
                 }
             }
@@ -328,7 +404,7 @@ function draw() {
             let color = elements[grid[y][x]].color;
             if (color == "clear") {} else {
                 if (color) {
-                    if (elements[grid[y][x]].state == "gas") {
+                    if (["gas", "energy"].includes(elements[grid[y][x]].state)) {
                         const match = color.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([0-9.]+))?\s*\)/i);
                         if (!match) continue;
                         let r = match[1];

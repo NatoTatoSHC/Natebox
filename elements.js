@@ -14,6 +14,8 @@ var behaviors = {
 }
 var elements = {
     air: {category: "TOOL"},
+    heat: {category: "TOOL", color: `rgb(255, 0, 0)`},
+    drink: {category: "TOOL", color: `rgb(0, 0, 255)`},
     sand: {
         state: "solid",
         category: "LAND",
@@ -49,7 +51,22 @@ var elements = {
                 replaceWith: "concrete"
             }
         ],
+        converts: {
+            cold: {},
+            hot: {
+                100: "steam",
+                1000: "bomb",
+                10000: "nuke"
+            }
+        },
         density: 1
+    },
+    steam: {
+        state: "gas",
+        category: "GASES",
+        movement: behaviors.GAS,
+        color: `rgb(157, 157, 157)`,
+        density: 0
     },
     plastic: {
         state: "solid",
@@ -59,7 +76,9 @@ var elements = {
     wood: {
         state: "solid",
         category: "BIO",
-        color: `rgb(103, 86, 55)`
+        color: `rgb(103, 86, 55)`,
+        flamable: .05,
+        coalChance: 5
     },
     branch: {
         state: "solid",
@@ -182,13 +201,21 @@ var elements = {
         density: 0,
         timeout: {
             min: 50,
-            max: 500
+            max: 200
         },
         spread: {
             tick: {
-                min: 5,
-                max: 10
+                min: 2,
+                max: 3
             }
         }
+    },
+    sugercane_seed: {},
+    charcoal: {
+        state: "solid",
+        category: "POWDERS",
+        movement: behaviors.POWDER,
+        color: `rgb(42, 42, 42)`,
+        flamable: .02
     }
 };
