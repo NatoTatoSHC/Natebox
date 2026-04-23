@@ -24,11 +24,17 @@ if (!localStorage.getItem("mods")) {
     localStorage.setItem("mods", JSON.stringify([]));
 }
 var mods = JSON.parse(localStorage.getItem("mods"));
-mods.forEach(async (mod) => {
-    let res = await fetch(mod);
-    if (!res.ok) return;
-    let txt = await res.text();
-    eval(txt);
+mods.forEach((mod) => {
+    let script = document.createElement('script');
+    if (mod.startsWith("https://")) {
+        script.src = mod;
+    } else {
+        script.src = "mods/"+mod;
+    }
+    document.head.append(script);
+    script.onload = () => {
+        generateSelectors();
+    }
 });
 
 //Init
@@ -41,6 +47,7 @@ var lastPos = {x: 0, y: 0};
 var iterations = 0;
 var brushSize = 2;
 var hovering = false;
+var playing = true;
 
 generateSelectors();
 
@@ -83,6 +90,12 @@ canvas.addEventListener("wheel", (e) => {
     }
 });
 
+window.addEventListener("keypress", (e) => {
+    if (e.key == " ") {
+        playing = !playing;
+    }
+});
+
 //FUNCTION
 function repeatArray(array, count) {
     let output = [];
@@ -96,7 +109,11 @@ function repeatArray(array, count) {
 function arrayArray(array, count) {
     let output = [];
     for (let i = 0; i < count; i++) {
-        output.push(copyArray(array));
+        try {
+            output.push(deepCopyArray(array));
+        } catch {
+            output.push(copyArray(array));
+        }
     }
     return output;
 }
@@ -116,6 +133,11 @@ function generateGrid(str) {
     return ret;
 }
 function generateSelectors() {
+    Array.from(selectPage.children).forEach(child => {
+        while (child.children.length > 1) {
+            child.removeChild(child.lastChild);
+        }
+    });
     Object.keys(elements).forEach(elemN => {
         let elem = elements[elemN];
         let button = document.createElement('button');
@@ -147,7 +169,10 @@ function explode(x, y, size) {
             if (distance <= size && isInGrid(x + eX, y + eY)) {
                 grid[y + eY][x + eX] = "air";
                 timeGrid[y + eY][x + eX] = 0;
-                tempGrid[y + eY][x + eX][0] =  ;
+                tempGrid[y + eY][x + eX][0] =  70;
+                let isCaught = Math.random();
+                tempGrid[y + eY][x + eX][1] = isCaught < .5 ? true: false;
+                tempGrid[y + eY][x + eX][2] = isCaught < .5 ? 10: 0;
             }
         }
     }
@@ -157,13 +182,29 @@ function changeSize(by) {
         brushSize += by;
     }
 }
+function neighboringAirOrFire(x,y, by) {
+    let out = false;
+    [-by, by].forEach(o => {
+        if (isInGrid(x, y + o) && (grid[y + o][x] == "air" || (tempGrid[y + o][x][1] && tempGrid[y + o][x][2] <= elements[grid[y + o][x]].burnTime - 5))) {
+            out = true;
+        }
+    });
+    [-by, by].forEach(o => {
+        if (isInGrid(x + o, y) && (grid[y][x + o] == "air" || (tempGrid[y][x + o][1] && tempGrid[y][x + o][2] <= elements[grid[y][x + o]].burnTime - 5))) {
+            out = true;
+        }
+    });
+    return out;
+}
 
 //ERRORS
 
 //LOOP
 function loop() {
     iterations++;
-    update();
+    if (playing) {
+        update();
+    }
     draw();
     setTimeout(loop, 1000 / 30)
 }
@@ -177,7 +218,7 @@ function update() {
                 for (let x = -brushSize; x < brushSize + 1; x++) {
                     let pixelPosX = lastPos.x + x;
                     let pixelPosY = lastPos.y + y;
-                    if (["heat", "drink"].includes(selected)) {
+                    if (["heat", "drink", "fire"].includes(selected)) {
                         if (isInGrid(pixelPosX, pixelPosY)) {
                             switch(selected) {
                                 case 'heat':
@@ -189,6 +230,11 @@ function update() {
                                         timeGrid[pixelPosY][pixelPosX] = 0;
                                         tempGrid[pixelPosY][pixelPosX][0] = 20;
                                     }
+                                    break;
+                                case 'fire':
+                                    tempGrid[pixelPosY][pixelPosX][0] = 600;
+                                    tempGrid[pixelPosY][pixelPosX][1] = true;
+                                    tempGrid[pixelPosY][pixelPosX][2] = Number(elements[grid[pixelPosY][pixelPosX]].burnTime);
                                     break;
                             }
                         }
@@ -300,24 +346,38 @@ function cellUpdate(x, y) {
     }
 
     //Spread
-    if (grid[y][x] == "fire") {
+    if (grid[y][x] == "fire" || tempGrid[y][x][1]) {
         tempGrid[y][x][1] = true;
     }
+    //Fire Timout
     if (tempGrid[y][x][1]) {
+        tempGrid[y][x][2]--;
+        if (tempGrid[y][x][2] <= 0) {
+            grid[y][x] = "air";
+            tempGrid[y][x] = [20, false, 0];
+        }
+    }
+    if (tempGrid[y][x][1]) {
+        if (!neighboringAirOrFire(x, y, 1)) {
+            tempGrid[y][x] = [tempGrid[y][x][0], false, 0];
+        }
         for (let dy = -1; dy <= 1; dy++) {
             for (let dx = -1; dx <= 1; dx++) {
                 //set fire,(())/ fire animation
                 if(isInGrid(x + dx, y + dy)) {
-                    if (elements[grid[y + dy][x + dx]].flamable) {
-                        if (Math.random() < elements[grid[y + dy][x + dx]].flamable) {
-                            if (isInGrid(x + dx, y + dy + 1) && elements[grid[y + dy][x + dx]].coalChance && Math.random() < elements[grid[y + dy][x + dx]].coalChance) {
-                                grid[y + dy + 1][x + dx] = "charcoal",
-                                timeGrid[y + dy + 1][x + dx] = 0;
-                                tempGrid[y + dy + 1][x + dx] = 20;
-                            }
-                            tempGrid[y + dy][x + dx][1]  = true;
-                            timeGrid[y + dy][x + dx] = 0;
-                        }
+                    if (elements[grid[y + dy][x + dx]].flamable &&
+                        Math.random() < elements[grid[y + dy][x + dx]].flamable &&
+                        neighboringAirOrFire(x + dx, y + dy, 1)
+                    ) {
+                        /*if (isInGrid(x + dx, y + dy + 1) && elements[grid[y + dy][x + dx]].coalChance && Math.random() < elements[grid[y + dy][x + dx]].coalChance && grid[y + dy][x + dx] == "air") {
+                            grid[y + dy + 1][x + dx] = "charcoal",
+                            timeGrid[y + dy + 1][x + dx] = 0;
+                            tempGrid[y + dy + 1][x + dx] = 20;
+                        }*/
+                        tempGrid[y + dy][x + dx][0] = 100;
+                        tempGrid[y + dy][x + dx][1] = true;
+                        tempGrid[y + dy][x + dx][2] = Number(elements[grid[y + dy][x + dx]].burnTime)
+                        timeGrid[y + dy][x + dx] = 0;
                     }
                 }
             }
@@ -406,7 +466,7 @@ function draw() {
             let color = elements[grid[y][x]].color;
             if (color == "clear") {} else {
                 if (color) {
-                    if (["gas", "energy"].includes(elements[grid[y][x]].state)) {
+                    if (["gas", "energy"].includes(elements[grid[y][x]].state) || tempGrid[y][x][1]) {
                         const match = color.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([0-9.]+))?\s*\)/i);
                         if (!match) continue;
                         let r = match[1];
@@ -416,10 +476,32 @@ function draw() {
                         c.fillRect((x - .5) * pixelSize, (y - .5) * pixelSize, pixelSize * 2, pixelSize * 2);
                     }
                     c.fillStyle = color;
-                    if (tempGrid[y][x][1]) {
+                    if (tempGrid[y][x][1] && Math.random() < .7) {
                         c.fillStyle = elements.fire.color;
+                        let tColor = elements.fire.color;
+                        const match = tColor.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([0-9.]+))?\s*\)/i);
+                        if (!match) continue;
+                        let r = match[1];
+                        let g = match[2];
+                        let b = match[3];
+                        c.fillStyle = `rgba(${r}, ${g}, ${b}, 0.5)`;
+                        c.fillRect((x - .5) * pixelSize, (y - .5) * pixelSize, pixelSize * 2, pixelSize * 2);
+                        c.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
                     }
                     c.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                } else {
+                    if (tempGrid[y][x][1] && Math.random() < .7) {
+                        c.fillStyle = elements.fire.color;
+                        let tColor = elements.fire.color;
+                        const match = tColor.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([0-9.]+))?\s*\)/i);
+                        if (!match) continue;
+                        let r = match[1];
+                        let g = match[2];
+                        let b = match[3];
+                        c.fillStyle = `rgba(${r}, ${g}, ${b}, 0.5)`;
+                        c.fillRect((x - .5) * pixelSize, (y - .5) * pixelSize, pixelSize * 2, pixelSize * 2);
+                        c.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                    }
                 }
             }
         }
@@ -428,4 +510,11 @@ function draw() {
     //Outline
     c.strokeStyle = `rgba(255, 255, 255, 0.43)`;
     c.strokeRect((lastPos.x - brushSize) * pixelSize, (lastPos.y - brushSize) * pixelSize, (brushSize * 2 + 1) * pixelSize, (brushSize * 2 + 1) * pixelSize);
+
+    //Pause
+    if (!playing) {
+        c.fillStyle = "lightblue";
+        c.font = "50px arial"
+        c.fillText("Paused", 10, 60);
+    }
 }

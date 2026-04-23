@@ -34,10 +34,13 @@
                 <div id="WEAPONS"><h1>Weapon</h1></div>
                 <div id="BIO"><h1>Biology</h1></div>
                 <div id="SPEC"><h1>Special</h1></div>
+                <div id="FOOD"><h1>Food</h1></div>
             </div>
             <div id="size">
                 <button onclick="changeSize(-1)">-</button>
                 <button onclick="changeSize(1)">+</button>
+                <button onclick="playing = !playing;" onload="this.innerHTML = 'hi'//('keypress', (e) => {alert()})">Pause</button>
+                <button onclick="if (!playing) update();">></button>
             </div>
         </div>
         <script src="./elements.js"></script>

@@ -10,7 +10,10 @@ var behaviors = {
     GAS: [
             ["0;-1", "-1;0", "1;0"],
             ["1;1", "1;-1", "-1;1", "-1;-1"]
-        ]
+        ],
+    TOWER: [
+        ["0;1"]
+    ]
 }
 
 var seedGrowths = {
@@ -18,7 +21,7 @@ var seedGrowths = {
 };
 
 var elements = {
-    air: {category: "TOOL"},
+    air: {category: "TOOL", burnTime: 5},
     heat: {category: "TOOL", color: `rgb(255, 0, 0)`},
     drink: {category: "TOOL", color: `rgb(0, 0, 255)`},
     sand: {
@@ -31,9 +34,7 @@ var elements = {
     mud: {
         state: "solid",
         category: "LAND",
-        movement: [
-            ["0;1"]
-        ],
+        movement: behaviors.TOWER,
         color: `rgb(90, 60, 0)`,
         density: 2
     },
@@ -221,6 +222,49 @@ var elements = {
         category: "POWDERS",
         movement: behaviors.POWDER,
         color: `rgb(42, 42, 42)`,
-        flamable: .02
-    }
+        burnTime: 20,
+        flamable: .04,
+        density: 2
+    },
+    milk: {
+        state: "liquid",
+        movement: behaviors.LIQUID,
+        category: "FOOD",
+        density: 1.01,
+        converts: {
+            hot: {
+                100: "cream"
+            }
+        },
+        color: "rgb(255, 255, 255)"
+    },
+    cream: {
+        state: "liquid",
+        movement: behaviors.LIQUID,
+        category: "FOOD",
+        density: 1.80,
+        color: "rgb(223, 223, 223)",
+        reactions: [
+            {
+                is: "water",
+                replaceWith: "creamy_water",
+                replaceSelf: "air"
+            }
+        ]
+    },
+    raw_chicken: {
+        state: "solid",
+        movement: behaviors.TOWER,
+        category: "FOOD",
+        density: 2,
+        color: `rgb(255, 109, 143)`
+    },
+    mushroom: {}
 };
+
+function addCategory(title, id) {
+    let cate = document.createElement('div');
+    cate.id = id;
+    cate.innerHTML = `<h1>${title}</h1>`;
+    selectPage.append(cate);
+}
