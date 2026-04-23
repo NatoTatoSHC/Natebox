@@ -19,6 +19,17 @@
                 padding-left: 5px;
                 color: white;
             }
+            #modMenu {
+                position: absolute;
+                width: 50%;
+                height: 50%;
+                left: 25%;
+                top: 25%;
+                background-color: black;
+                border: 1px solid gray;
+                color: white;
+                text-align: center;
+            }
             
         </style>
     </head>
@@ -41,7 +52,12 @@
                 <button onclick="changeSize(1)">+</button>
                 <button onclick="playing = !playing;" onload="this.innerHTML = 'hi'//('keypress', (e) => {alert()})">Pause</button>
                 <button onclick="if (!playing) update();">></button>
+                <button onclick="modMenu()">Mods</button>
             </div>
+        </div>
+        <div id="modMenu" hidden>
+            <h1>Mods</h1>
+            <input type="text" id="mod" placeholder="Mod File Name..." autocomplete="off">
         </div>
         <script src="./elements.js"></script>
         <script src="./index.js"></script>

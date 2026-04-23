@@ -7,6 +7,7 @@ const pixelSize = 10;
 
 //DOM
 const selectPage = document.getElementById("select");
+const modM = document.getElementById("modMenu");
 
 //SETUP
 //Canvas
@@ -35,7 +36,18 @@ mods.forEach((mod) => {
     script.onload = () => {
         generateSelectors();
     }
+    let txt = document.createElement("p");
+    txt.innerText = mod;
+    txt.onclick = function(e) {
+        let mods = JSON.parse(localStorage.getItem("mods"));
+        mods.splice(mods.indexOf(txt.innerText), 1);
+        modM.removeChild(txt);
+        localStorage.setItem("mods", JSON.stringify(mods));
+        location.reload();
+    }
+    modM.append(txt);
 });
+
 
 //Init
 var grid = generateGrid("air");
@@ -96,6 +108,10 @@ window.addEventListener("keypress", (e) => {
     }
 });
 
+modM.children.namedItem("mod").addEventListener("keypress", e => {
+    addMod(e, modM.children.namedItem("mod").value);
+});
+
 //FUNCTION
 function repeatArray(array, count) {
     let output = [];
@@ -154,7 +170,11 @@ function generateSelectors() {
     });
 }
 function toTitleCase(string) {
-    return string[0].toUpperCase() + string.slice(1);
+    let out = []
+    string.split("_").forEach(word => {
+        out.push(word[0].toUpperCase() + word.slice(1));
+    });
+    return out.join(" ");
 }
 function isInGrid(x, y) {
     return y >= 0 &&
@@ -195,6 +215,17 @@ function neighboringAirOrFire(x,y, by) {
         }
     });
     return out;
+}
+function modMenu() {
+    modM.hidden = !modM.hidden;
+}
+function addMod(e, mod) {
+    if (e.keyCode == 13) {
+        let mods = JSON.parse(localStorage.getItem("mods"))
+        mods.push(mod);
+        localStorage.setItem("mods", JSON.stringify(mods));
+        location.reload();
+    }
 }
 
 //ERRORS
