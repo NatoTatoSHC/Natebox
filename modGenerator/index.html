@@ -62,6 +62,16 @@
                     </select>
                     <button onclick="addMove(this.parentElement)">+</button>
                 </div>
+                <div id="explode" class="boxe">
+                    <template id="filling">
+                    </template>
+                    <input type="number" placeholder="Size" autocomplete="off" name="size">
+                    <select id="trigger" onchange="addExplode(this.parentElement)">
+                        <option value="null">None</option>
+                        <option value="impact">Impact</option>
+                    </select>
+                    <div id="cont" class="boxo"></div>
+                </div>
                 <button onclick="this.parentElement.parentElement.removeChild(this.parentElement)">-</button>
             </template>
             <h2>Elements</h2>
@@ -90,6 +100,12 @@
                 react.className = "boxo";
                 react.innerHTML = elem.querySelector("#filling").innerHTML;
                 elem.append(react);
+            }
+            function addExplode(elem) {
+                alert(elem.getElementById("trigger").value);
+                if (elem.getElementById("trigger").value == "impact") {
+                    alert("impact")
+                }
             }
         </script>
     </body>
