@@ -41,3 +41,13 @@ elements.raw_chicken.reactions.push({
     replaceWith: "chicken_broth",
     replaceSelf: "air"
 });
+
+//Cream
+if (!elements.cream.reactions) {
+    elements.cream.reactions = [];
+}
+elements.cream.reactions.push({
+    is: "water",
+    replaceWith: "creamy_water",
+    replaceSelf: "air"
+});

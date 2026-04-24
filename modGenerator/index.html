@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Mod Generator</title>
+        <style>
+            .section {
+                background-color: whitesmoke;
+                border-radius: 10px;
+                text-align: center;
+            }
+            .boxo {
+                background-color: rgb(214, 214, 214);
+                padding: 3px;
+                border: 1px solid gray;
+            }
+            .boxe {
+                background-color: whitesmoke;
+                padding: 3px;
+                border: 1px solid gray;
+            }
+        </style>
+    </head>
+    <body>
+        <header><h1>Mod Generator</h1></header>
+        <div id="category" class="section">
+            <h2>Categories</h2>
+            <button onclick="addCategory();">+</button>
+        </div>
+        <div id="element" class="section">
+            <template id="filling">
+                <input type="text" autocomplete="off" placeholder="Id (Use lower case and underscores)" name="id">
+                <div id="req">
+                    <h3>Required</h3>
+                    <input type="text" autocomplete="off" placeholder="Category Id" name="category">
+                    <select name="state">
+                        <option value="solid">Solid</option>
+                        <option value="liquid">Liquid</option>
+                        <option value="gas">Gas</option>
+                    </select>
+                    <input type="color" name="color">
+                    <input type="number" autocomplete="off" placeholder="Density" name="density">
+                </div>
+                <div id="reactions" class="boxe">
+                    <template id="filling">
+                        <input type="text" autocomplete="off" placeholder="Neighbor Is..." name="is">
+                        <input type="text" autocomplete="off" placeholder="Replace With" name="replaceWith">
+                        <input type="text" autocomplete="off" placeholder="Replace Self With (OPT)" name="replaceSelf">
+                        <button onclick="this.parentElement.parentElement.removeChild(this.parentElement)">-</button>
+                    </template>
+                    <h3>Reactions</h3>
+                    <button onclick="addReaction(this.parentElement)">+</button>
+                </div>
+                <div id="movement" class="boxe">
+                    <h3>Movement</h3>
+                    <select name="movement">
+                        <option value="null">None</option>
+                        <option value="POWDER">Powder</option>
+                        <option value="TOWER">Tower</option>
+                        <option value="LIQUID">Liquid</option>
+                        <option value="GAS">Gas</option>
+                        <option value="other">Other<input type="text" autocomplete="off" placeholder="Other... (x;y,x;y,x;y)"></option>
+                    </select>
+                    <button onclick="addMove(this.parentElement)">+</button>
+                </div>
+                <button onclick="this.parentElement.parentElement.removeChild(this.parentElement)">-</button>
+            </template>
+            <h2>Elements</h2>
+            <button onclick="addElement();">+</button>
+        </div>
+        <script>
+            const category = document.getElementById("category");
+            const element = document.getElementById("element");
+
+            const cateFilling = "<input type=\"text\" autocomplete=\"off\" placeholder=\"Title\" name=\"title\"><input type=\"text\" autocomplete=\"off\" placeholder=\"Id\" name=\"id\"><button onclick=\"this.parentElement.parentElement.removeChild(this.parentElement)\">-</button>";
+
+            function addCategory() {
+                let cate = document.createElement('div');
+                cate.className = "boxo";
+                cate.innerHTML =  cateFilling;
+                category.append(cate);
+            }
+            function addElement() {
+                let elem = document.createElement('div');
+                elem.className = "boxo";
+                elem.innerHTML = element.querySelector("#filling").innerHTML;
+                element.append(elem);
+            }
+            function addReaction(elem) {
+                let react = document.createElement('div');
+                react.className = "boxo";
+                react.innerHTML = elem.querySelector("#filling").innerHTML;
+                elem.append(react);
+            }
+        </script>
+    </body>
+</html>

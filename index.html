@@ -19,16 +19,33 @@
                 padding-left: 5px;
                 color: white;
             }
-            #modMenu {
+            .hidden {
+                display:none;
+            }
+            .menu {
                 position: absolute;
-                width: 50%;
-                height: 50%;
-                left: 25%;
-                top: 25%;
                 background-color: black;
                 border: 1px solid gray;
                 color: white;
                 text-align: center;
+                overflow-y: scroll;
+                width: 50%;
+                height: 50%;
+                left: 25%;
+                top: 25%;
+            }
+            #modMenu {
+                
+            }
+            #savesMenu {
+                div {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    grid-template-rows: auto;
+                    h1 {
+                        grid-column: 1 / span 4;
+                    }
+                }
             }
             
         </style>
@@ -42,6 +59,7 @@
                 <div id="POWDERS"><h1>Powder</h1></div>
                 <div id="SOLIDS"><h1>Solid</h1></div>
                 <div id="GASES"><h1>Gas</h1></div>
+                <div id="ENER"><h1>Energy</h1></div>
                 <div id="WEAPONS"><h1>Weapon</h1></div>
                 <div id="BIO"><h1>Biology</h1></div>
                 <div id="SPEC"><h1>Special</h1></div>
@@ -53,13 +71,112 @@
                 <button onclick="playing = !playing;" onload="this.innerHTML = 'hi'//('keypress', (e) => {alert()})">Pause</button>
                 <button onclick="if (!playing) update();">></button>
                 <button onclick="modMenu()">Mods</button>
+                <button onclick="sm.parentElement.hidden = !sm.parentElement.hidden;">Saves</button>
             </div>
         </div>
-        <div id="modMenu" hidden>
+        <div id="modMenu" class="menu" hidden>
             <h1>Mods</h1>
+            <p>Enter [mod].js or enter  url</p>
             <input type="text" id="mod" placeholder="Mod File Name..." autocomplete="off">
+        </div>
+        <div id="savesMenu" class="menu" hidden>
+            <div>
+                <h1>Saves</h1>
+            </div>
         </div>
         <script src="./elements.js"></script>
         <script src="./index.js"></script>
+        <script>
+            const saveSlots = 12;
+            let sm = document.getElementById("savesMenu").children.item(0);
+            function calculateData(slot, elem) {
+                if (!localStorage.getItem("saves")) {
+                    localStorage.setItem("saves", "{}");
+                    elem.innerText =  "0B"
+                } else {
+                    let saves = JSON.parse(localStorage.getItem("saves"));
+                    if (saves[slot]) {
+                        elem.innerText =  convertBytes(JSON.stringify(saves[slot]).length);
+                    } else {
+                        elem.innerText = "0B"
+                    }
+                }
+            }
+            function convertBytes(bytes) {
+                if (bytes >= 1024) {
+                    return (bytes / 1024).toFixed(1) + "KB";
+                } else  {
+                    return bytes + "B";
+                }
+            }
+
+            for (let i = 0; i < saveSlots; i++) {
+                let slot = document.createElement('div');
+                slot.id = (i + 1).toString();
+                slot.style.display = "block";
+                slot.style.border = "1px solid gray"
+
+                let p = document.createElement('p');
+                p.innerText = (i + 1).toString();
+                slot.append(p);
+                let save = document.createElement('button');
+                save.textContent = "Save";
+                save.onclick = function () {
+                    if (!localStorage.getItem("saves")) {
+                        localStorage.setItem("saves", "{}");
+                    }
+                    let saves = JSON.parse(localStorage.getItem("saves"));
+                    let gameState = {grid: grid, timeGrid: timeGrid, tempGrid: tempGrid, mods: mods};
+                    saves[slot.id] = gameState;
+                    localStorage.setItem("saves", JSON.stringify(saves));
+                    calculateData(slot.id, bytes);
+                }
+                slot.append(save);
+                let load = document.createElement('button');
+                load.textContent = "Load";
+                load.onclick = function () {
+                    if (!localStorage.getItem("saves")) {
+                        localStorage.setItem("saves", "{}");
+                    } else {
+                        let saves = JSON.parse(localStorage.getItem("saves"));
+                        if (saves[slot.id]) {
+                            grid = saves[slot.id].grid;
+                            timeGrid = saves[slot.id].timeGrid;
+                            tempGrid = saves[slot.id].tempGrid;
+                            if (JSON.stringify(JSON.parse(localStorage.getItem("mods")).sort()) !=
+                                JSON.stringify(saves[slot.id].mods.sort())
+                            ) {
+                                alert("Not all required mods are installed! Installing them now.");
+                                saves[slot.id].mods.forEach(mod => {
+                                    if (!mods.includes(mod)) {
+                                        addModBroke(mod);
+                                    }
+                                });
+                                location.reload();
+                                
+                            }
+                        }
+                    }
+                }
+                slot.append(load);
+                let wipe = document.createElement('button');
+                wipe.textContent = "Wipe";
+                wipe.onclick = function () {
+                    if (!localStorage.getItem("saves")) {
+                        localStorage.setItem("saves", "{}");
+                    }
+                    let saves = JSON.parse(localStorage.getItem("saves"));
+                    delete saves[slot.id];
+                    localStorage.setItem("saves", JSON.stringify(saves));
+                    calculateData(slot.id, bytes);
+                }
+                slot.append(wipe);
+                let bytes = document.createElement('p');
+                calculateData(slot.id, bytes);
+                slot.append(bytes);
+
+                sm.append(slot);
+            }
+        </script>
     </body>
 </html>

@@ -24,6 +24,7 @@ var elements = {
     air: {category: "TOOL", burnTime: 5},
     heat: {category: "TOOL", color: `rgb(255, 0, 0)`},
     drink: {category: "TOOL", color: `rgb(0, 0, 255)`},
+    eat: {category: "TOOL", color: `rgb(73, 255, 57)`},
     sand: {
         state: "solid",
         category: "LAND",
@@ -200,7 +201,7 @@ var elements = {
     },
     fire: {
         state: "energy",
-        category: "TOOL",
+        category: "ENER",
         color: `rgb(255, 170, 0)`,
         timeout: {
             min: 50,
@@ -212,8 +213,17 @@ var elements = {
         seed: {
             type: seedGrowths.SHAFT,
             maxGrowth: 5,
+            grow: "sugarcane",
+            growChance: .1,
+            growRollTick: 30
             
         },
+        category: "BIO",
+        state: "solid",
+        movement: behaviors.POWDER
+    },
+    sugarcane: {
+        color: `rgb(24, 162, 0)`,
         category: "BIO",
         state: "solid"
     },
@@ -243,14 +253,7 @@ var elements = {
         movement: behaviors.LIQUID,
         category: "FOOD",
         density: 1.80,
-        color: "rgb(223, 223, 223)",
-        reactions: [
-            {
-                is: "water",
-                replaceWith: "creamy_water",
-                replaceSelf: "air"
-            }
-        ]
+        color: "rgb(223, 223, 223)"
     },
     raw_chicken: {
         state: "solid",
@@ -259,7 +262,13 @@ var elements = {
         density: 2,
         color: `rgb(255, 109, 143)`
     },
-    mushroom: {}
+    mushroom: {},
+    dark_matter: {
+        state: "solid",
+        color: `rgba(57, 57, 57, 0.1)`,
+        category: "ENER",
+        density: 100
+    }
 };
 
 function addCategory(title, id) {

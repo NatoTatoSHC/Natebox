@@ -6,3 +6,18 @@ elements.rozierium = {
     category: "stag30",
     state: "solid"
 };
+elements.belugium = {
+    category: "stag30"
+}
+elements.gingerium = {
+    category: "stag30"
+}
+elements.brownium = {
+    category: "stag30"
+}
+elements.natoium = {
+    category: "stag30"
+}
+elements.kootsynium = {
+    category: "stag30"
+}

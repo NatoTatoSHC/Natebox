@@ -8,6 +8,7 @@ const pixelSize = 10;
 //DOM
 const selectPage = document.getElementById("select");
 const modM = document.getElementById("modMenu");
+const savesMenu = document.getElementById("savesMenu");
 
 //SETUP
 //Canvas
@@ -60,6 +61,9 @@ var iterations = 0;
 var brushSize = 2;
 var hovering = false;
 var playing = true;
+var toolElements = {};
+var showDarkMatter = false;
+var plants = [];
 
 generateSelectors();
 
@@ -227,6 +231,11 @@ function addMod(e, mod) {
         location.reload();
     }
 }
+function addModBroke(mod) {
+        let mods = JSON.parse(localStorage.getItem("mods"))
+        mods.push(mod);
+        localStorage.setItem("mods", JSON.stringify(mods));
+}
 
 //ERRORS
 
@@ -249,7 +258,7 @@ function update() {
                 for (let x = -brushSize; x < brushSize + 1; x++) {
                     let pixelPosX = lastPos.x + x;
                     let pixelPosY = lastPos.y + y;
-                    if (["heat", "drink", "fire"].includes(selected)) {
+                    if (["heat", "drink", "fire", "eat"].includes(selected)) {
                         if (isInGrid(pixelPosX, pixelPosY)) {
                             switch(selected) {
                                 case 'heat':
@@ -263,11 +272,25 @@ function update() {
                                     }
                                     break;
                                 case 'fire':
-                                    tempGrid[pixelPosY][pixelPosX][0] = 600;
-                                    tempGrid[pixelPosY][pixelPosX][1] = true;
-                                    tempGrid[pixelPosY][pixelPosX][2] = Number(elements[grid[pixelPosY][pixelPosX]].burnTime);
+                                    if (elements[grid[pixelPosY][pixelPosX]].flamable || grid[pixelPosY][pixelPosX] == "air") {
+                                        tempGrid[pixelPosY][pixelPosX][0] = 600;
+                                        tempGrid[pixelPosY][pixelPosX][1] = true;
+                                        tempGrid[pixelPosY][pixelPosX][2] = Number(elements[grid[pixelPosY][pixelPosX]].burnTime);
+                                    }
                                     break;
+                                case 'eat':
+                                    if (elements[grid[pixelPosY][pixelPosX]].state == "solid") {
+                                        grid[pixelPosY][pixelPosX] = "air";
+                                        timeGrid[pixelPosY][pixelPosX] = 0;
+                                        tempGrid[pixelPosY][pixelPosX][0] = 20;
+                                    }
                             }
+                        }
+                    } else if (Object.keys(toolElements).includes(selected)) {
+                        if (isInGrid(pixelPosX, pixelPosY)) {
+                            clicking = false;
+                            let exit = toolElements[selected](pixelPosX, pixelPosY);
+                            if (exit) return;
                         }
                     } else {
                         if (isInGrid(pixelPosX, pixelPosY) && grid[pixelPosY][pixelPosX] != selected) {
@@ -277,6 +300,23 @@ function update() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    //Seed Growth
+    for (p in plants) {
+        let plant = plants[p];
+        let plantElement = elements[plant.type];
+        if ((iterations % plantElement.seed.growRollTick) === 0 && Math.random() < plantElement.seed.growChance && plant.progress < plantElement.seed.maxGrowth) {
+            plant.progress++;
+            let rndInd = Math.floor(Math.random() * plantElement.seed.type.length);
+            let coords = plantElement.seed.type[rndInd].split(";").map(item => {return Number(item)});
+            if (isInGrid(plant.lastX + coords[0], plant.lastY + coords[1]) && grid[plant.lastY + coords[1]][plant.lastX + coords[0]] == "air") {
+                grid[plant.lastY + coords[1]][plant.lastX + coords[0]] = plantElement.seed.grow;
+                timeGrid[plant.lastY + coords[1]][plant.lastX + coords[0]] = 0;
+                plant.lastX += coords[0];
+                plant.lastY += coords[1];
             }
         }
     }
@@ -335,6 +375,22 @@ function cellUpdate(x, y) {
                 timeGrid[y + rndY][x + rndX] = 0;
                 tempGrid[y + rndY][x + rndX][0] = 20;
             }
+        }
+    }
+
+    //Seed Growth
+    let seed = elements[grid[y][x]].seed;
+    if (seed) {
+        let newPlant = {
+            type: grid[y][x],
+            lastX: x,
+            lastY: y,
+            progress: 0
+        };
+        if ((isInGrid(x, y + 1) && grid[y + 1][x] != "air") || !isInGrid(x, y + 1))  {
+            grid[y][x] = elements[newPlant.type].seed.grow;
+            timeGrid[y][x] = 0;
+            plants.push(newPlant);
         }
     }
 
@@ -454,9 +510,16 @@ function cellUpdate(x, y) {
                 
                 break; // stop after moving once
             } else if (
+                isInGrid(nx, ny) &&
                 ny >= 0 && ny < gameParams.height / pixelSize &&
                 nx >= 0 && nx < gameParams.width / pixelSize &&
-                elements[grid[ny][nx]].density < elements[grid[y][x]].density
+                (
+                    elements[grid[ny][nx]].density < elements[grid[y][x]].density ||
+                    (
+                        elements[grid[y][x]].state == "gas" &&
+                        elements[grid[ny][nx]].density > elements[grid[y][x]].density
+                    )
+                )
             ) {
                 if (elements[grid[ny][nx]].state == "liquid" && elements[grid[y][x]].state == "liquid" && (iterations % 4) === 0) {
                     let thisElem = grid[y][x];
@@ -507,6 +570,9 @@ function draw() {
                         c.fillRect((x - .5) * pixelSize, (y - .5) * pixelSize, pixelSize * 2, pixelSize * 2);
                     }
                     c.fillStyle = color;
+                    if (grid[y][x] == "dark_matter" && showDarkMatter) {
+                        c.fillStyle = "white";
+                    }
                     if (tempGrid[y][x][1] && Math.random() < .7) {
                         c.fillStyle = elements.fire.color;
                         let tColor = elements.fire.color;
@@ -541,6 +607,11 @@ function draw() {
     //Outline
     c.strokeStyle = `rgba(255, 255, 255, 0.43)`;
     c.strokeRect((lastPos.x - brushSize) * pixelSize, (lastPos.y - brushSize) * pixelSize, (brushSize * 2 + 1) * pixelSize, (brushSize * 2 + 1) * pixelSize);
+
+    //Hovering
+    c.fillStyle = "white";
+    c.font = "30px arial"
+    if (isInGrid(lastPos.x, lastPos.y)) c.fillText(toTitleCase(grid[lastPos.y][lastPos.x]), 10, gameParams.height - 10);
 
     //Pause
     if (!playing) {
