@@ -82,8 +82,8 @@ var elements = {
         state: "solid",
         category: "BIO",
         color: `rgb(103, 86, 55)`,
-        flamable: .05,
-        coalChance: .5
+        burnTime: 5,
+        flamable: .05
     },
     branch: {
         state: "solid",

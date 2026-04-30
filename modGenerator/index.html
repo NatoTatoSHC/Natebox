@@ -26,19 +26,19 @@
             <h2>Categories</h2>
             <button onclick="addCategory();">+</button>
         </div>
-        <div id="element" class="section">
+        <div id="element" class="section" >
             <template id="filling">
                 <input type="text" autocomplete="off" placeholder="Id (Use lower case and underscores)" name="id">
                 <div id="req">
                     <h3>Required</h3>
-                    <input type="text" autocomplete="off" placeholder="Category Id" name="category">
-                    <select name="state">
+                    <input type="text" autocomplete="off" placeholder="Category Id" id="category">
+                    <select id="state">
                         <option value="solid">Solid</option>
                         <option value="liquid">Liquid</option>
                         <option value="gas">Gas</option>
                     </select>
-                    <input type="color" name="color">
-                    <input type="number" autocomplete="off" placeholder="Density" name="density">
+                    <input type="color" id="color">
+                    <input type="number" autocomplete="off" placeholder="Density" id="density">
                 </div>
                 <div id="reactions" class="boxe">
                     <template id="filling">
@@ -58,13 +58,11 @@
                         <option value="TOWER">Tower</option>
                         <option value="LIQUID">Liquid</option>
                         <option value="GAS">Gas</option>
-                        <option value="other">Other<input type="text" autocomplete="off" placeholder="Other... (x;y,x;y,x;y)"></option>
+                        <option value="other">Other<input type="text" autocomplete="off" placeholder="Other... ((x;y,x;y,x;y),(x;y,x;y,x;y))"></option>
                     </select>
-                    <button onclick="addMove(this.parentElement)">+</button>
                 </div>
                 <div id="explode" class="boxe">
-                    <template id="filling">
-                    </template>
+                    <h3>Explode</h3>
                     <input type="number" placeholder="Size" autocomplete="off" name="size">
                     <select id="trigger" onchange="addExplode(this.parentElement)">
                         <option value="null">None</option>
@@ -72,16 +70,30 @@
                     </select>
                     <div id="cont" class="boxo"></div>
                 </div>
+                <div id="converts" class="boxe">
+                    <template id="filling">
+                        <select id="type">
+                            <option value="hot">Hot</option>
+                            <option value="cold">Cold</option>
+                        </select>
+                        <input id="temp" type="number" placeholder="Temperature"/>
+                        <input id="element" type="text" placeholder="Element"/>
+                        <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);">-</button>
+                    </template>
+                    <h3>Converts</h3>
+                    <button onclick="addConverts(this.parentElement)">+</button>
+                </div>
                 <button onclick="this.parentElement.parentElement.removeChild(this.parentElement)">-</button>
             </template>
             <h2>Elements</h2>
             <button onclick="addElement();">+</button>
         </div>
+        <button onclick="build()">Build</button>
         <script>
             const category = document.getElementById("category");
             const element = document.getElementById("element");
 
-            const cateFilling = "<input type=\"text\" autocomplete=\"off\" placeholder=\"Title\" name=\"title\"><input type=\"text\" autocomplete=\"off\" placeholder=\"Id\" name=\"id\"><button onclick=\"this.parentElement.parentElement.removeChild(this.parentElement)\">-</button>";
+            const cateFilling = "<input type=\"text\" autocomplete=\"off\" placeholder=\"Title\" id=\"title\"><input type=\"text\" autocomplete=\"off\" placeholder=\"Id\" id=\"id\"><button onclick=\"this.parentElement.parentElement.removeChild(this.parentElement)\">-</button>";
 
             function addCategory() {
                 let cate = document.createElement('div');
@@ -93,7 +105,7 @@
                 let elem = document.createElement('div');
                 elem.className = "boxo";
                 elem.innerHTML = element.querySelector("#filling").innerHTML;
-                element.append(elem);
+                element.append(elem, document.createElement("br"));
             }
             function addReaction(elem) {
                 let react = document.createElement('div');
@@ -102,10 +114,41 @@
                 elem.append(react);
             }
             function addExplode(elem) {
-                alert(elem.getElementById("trigger").value);
-                if (elem.getElementById("trigger").value == "impact") {
+                if (elem.querySelector("#trigger").value == "impact") {
                     alert("impact")
                 }
+            }
+            function addConverts(elem) {
+                let conv = document.createElement("div");
+                conv.className = "boxo";
+                conv.innerHTML = elem.querySelector("#filling").innerHTML;
+                elem.append(conv);
+            }
+ 
+
+            function build() {
+                let mod = [];
+
+                let categoryAdd = [];
+                Array.from(category.querySelectorAll("div")).forEach(cate => {
+                    let newCategory = `addCategory("${cate.querySelector("#title").value}", "${cate.querySelector("#id").value}")`;
+                    categoryAdd.push(newCategory);
+                });
+
+                let elementAdd = [];
+                try {
+                Array.from(element.querySelectorAll(":scope > div")).forEach(elem => {
+                    let newElement = {};
+                    let required = elem.querySelector("#req");
+                    Array.from(required.children).forEach(requirement => {
+                        if (requirement.id) {
+                            newElement[requirement.id] = requirement.value;
+                        }
+                    });
+                    alert(JSON.stringify(newElement));
+
+                });
+                } catch(e) {alert(e)}
             }
         </script>
     </body>
