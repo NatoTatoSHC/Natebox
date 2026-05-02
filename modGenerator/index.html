@@ -28,23 +28,23 @@
         </div>
         <div id="element" class="section" >
             <template id="filling">
-                <input type="text" autocomplete="off" placeholder="Id (Use lower case and underscores)" name="id">
+                <input class="save" type="text" autocomplete="off" placeholder="Id (Use lower case and underscores)" id="id">
                 <div id="req">
                     <h3>Required</h3>
-                    <input type="text" autocomplete="off" placeholder="Category Id" id="category">
+                    <input class="save" type="text" autocomplete="off" placeholder="Category Id" id="category">
                     <select id="state">
                         <option value="solid">Solid</option>
                         <option value="liquid">Liquid</option>
                         <option value="gas">Gas</option>
                     </select>
-                    <input type="color" id="color">
-                    <input type="number" autocomplete="off" placeholder="Density" id="density">
+                    <input class="save" type="color" id="color">
+                    <input class="save" type="number" autocomplete="off" placeholder="Density" id="density">
                 </div>
                 <div id="reactions" class="boxe">
                     <template id="filling">
-                        <input type="text" autocomplete="off" placeholder="Neighbor Is..." name="is">
-                        <input type="text" autocomplete="off" placeholder="Replace With" name="replaceWith">
-                        <input type="text" autocomplete="off" placeholder="Replace Self With (OPT)" name="replaceSelf">
+                        <input class="save" type="text" autocomplete="off" placeholder="Neighbor Is..." id="is">
+                        <input class="save" type="text" autocomplete="off" placeholder="Replace With" id="replaceWith">
+                        <input class="save" type="text" autocomplete="off" placeholder="Replace Self With (OPT)"id="replaceSelf">
                         <button onclick="this.parentElement.parentElement.removeChild(this.parentElement)">-</button>
                     </template>
                     <h3>Reactions</h3>
@@ -52,18 +52,19 @@
                 </div>
                 <div id="movement" class="boxe">
                     <h3>Movement</h3>
-                    <select name="movement">
+                    <select id="movement">
                         <option value="null">None</option>
                         <option value="POWDER">Powder</option>
                         <option value="TOWER">Tower</option>
                         <option value="LIQUID">Liquid</option>
                         <option value="GAS">Gas</option>
-                        <option value="other">Other<input type="text" autocomplete="off" placeholder="Other... ((x;y,x;y,x;y),(x;y,x;y,x;y))"></option>
+                        <option value="other">Other</option>
                     </select>
+                    <input class="save" type="text" autocomplete="off" placeholder="Other... (x;y,x;y/x;y,x;y)" id="other">
                 </div>
                 <div id="explode" class="boxe">
                     <h3>Explode</h3>
-                    <input type="number" placeholder="Size" autocomplete="off" name="size">
+                    <input class="save" type="number" placeholder="Size" autocomplete="off" id="size">
                     <select id="trigger" onchange="addExplode(this.parentElement)">
                         <option value="null">None</option>
                         <option value="impact">Impact</option>
@@ -76,8 +77,8 @@
                             <option value="hot">Hot</option>
                             <option value="cold">Cold</option>
                         </select>
-                        <input id="temp" type="number" placeholder="Temperature"/>
-                        <input id="element" type="text" placeholder="Element"/>
+                        <input class="save" id="temp" type="number" placeholder="Temperature"/>
+                        <input class="save" id="element" type="text" placeholder="Element"/>
                         <button onclick="this.parentElement.parentElement.removeChild(this.parentElement);">-</button>
                     </template>
                     <h3>Converts</h3>
@@ -89,11 +90,13 @@
             <button onclick="addElement();">+</button>
         </div>
         <button onclick="build()">Build</button>
+        <button onclick="save()">Save</button>
+        <button onclick="load()">Load</button>
         <script>
             const category = document.getElementById("category");
             const element = document.getElementById("element");
 
-            const cateFilling = "<input type=\"text\" autocomplete=\"off\" placeholder=\"Title\" id=\"title\"><input type=\"text\" autocomplete=\"off\" placeholder=\"Id\" id=\"id\"><button onclick=\"this.parentElement.parentElement.removeChild(this.parentElement)\">-</button>";
+            const cateFilling = "<input class=\"save\" type=\"text\" autocomplete=\"off\" placeholder=\"Title\" id=\"title\"><input class=\"save\" type=\"text\" autocomplete=\"off\" placeholder=\"Id\" id=\"id\"><button onclick=\"this.parentElement.parentElement.removeChild(this.parentElement)\">-</button>";
 
             function addCategory() {
                 let cate = document.createElement('div');
@@ -115,7 +118,6 @@
             }
             function addExplode(elem) {
                 if (elem.querySelector("#trigger").value == "impact") {
-                    alert("impact")
                 }
             }
             function addConverts(elem) {
@@ -124,10 +126,81 @@
                 conv.innerHTML = elem.querySelector("#filling").innerHTML;
                 elem.append(conv);
             }
+
+            function setValue(parent, selector, value) {
+                let input = parent.querySelector(selector);
+                if (input) input.value = value ?? "";
+            }
+
+            function getValue(parent, selector) {
+                let input = parent.querySelector(selector);
+                return input ? input.value : "";
+            }
+
+            function getElementData(elem) {
+                let movement = elem.querySelector(":scope > #movement");
+                let explode = elem.querySelector(":scope > #explode");
+                let converts = elem.querySelector(":scope > #converts");
+                let reactions = elem.querySelector(":scope > #reactions");
+
+                return {
+                    id: getValue(elem, ":scope > #id"),
+                    category: getValue(elem, "#req #category"),
+                    state: getValue(elem, "#req #state"),
+                    color: getValue(elem, "#req #color"),
+                    density: getValue(elem, "#req #density"),
+                    reactions: Array.from(reactions.querySelectorAll(":scope > div")).map(reaction => ({
+                        is: getValue(reaction, "#is"),
+                        replaceWith: getValue(reaction, "#replaceWith"),
+                        replaceSelf: getValue(reaction, "#replaceSelf")
+                    })),
+                    movement: getValue(movement, "#movement"),
+                    otherMovement: getValue(movement, "#other"),
+                    explodeSize: getValue(explode, "#size"),
+                    explodeTrigger: getValue(explode, "#trigger"),
+                    converts: Array.from(converts.querySelectorAll(":scope > div")).map(convert => ({
+                        type: getValue(convert, "#type"),
+                        temp: getValue(convert, "#temp"),
+                        element: getValue(convert, "#element")
+                    }))
+                };
+            }
+
+            function setElementData(elem, data) {
+                setValue(elem, ":scope > #id", data.id);
+                setValue(elem, "#req #category", data.category);
+                setValue(elem, "#req #state", data.state || "solid");
+                setValue(elem, "#req #color", data.color || "#000000");
+                setValue(elem, "#req #density", data.density);
+                setValue(elem, "#movement #movement", data.movement || "null");
+                setValue(elem, "#movement #other", data.otherMovement);
+                setValue(elem, "#explode #size", data.explodeSize);
+                setValue(elem, "#explode #trigger", data.explodeTrigger || "null");
+
+                let reactions = elem.querySelector(":scope > #reactions");
+                Array.from(reactions.querySelectorAll(":scope > div")).forEach(reaction => reaction.remove());
+                (data.reactions || []).forEach(reactionData => {
+                    addReaction(reactions);
+                    let reaction = reactions.querySelector(":scope > div:last-child");
+                    setValue(reaction, "#is", reactionData.is);
+                    setValue(reaction, "#replaceWith", reactionData.replaceWith);
+                    setValue(reaction, "#replaceSelf", reactionData.replaceSelf);
+                });
+
+                let converts = elem.querySelector(":scope > #converts");
+                Array.from(converts.querySelectorAll(":scope > div")).forEach(convert => convert.remove());
+                (data.converts || []).forEach(convertData => {
+                    addConverts(converts);
+                    let convert = converts.querySelector(":scope > div:last-child");
+                    setValue(convert, "#type", convertData.type || "hot");
+                    setValue(convert, "#temp", convertData.temp);
+                    setValue(convert, "#element", convertData.element);
+                });
+            }
  
 
             function build() {
-                let mod = [];
+                let mod = "";
 
                 let categoryAdd = [];
                 Array.from(category.querySelectorAll("div")).forEach(cate => {
@@ -136,19 +209,112 @@
                 });
 
                 let elementAdd = [];
-                try {
                 Array.from(element.querySelectorAll(":scope > div")).forEach(elem => {
                     let newElement = {};
+
                     let required = elem.querySelector("#req");
                     Array.from(required.children).forEach(requirement => {
                         if (requirement.id) {
-                            newElement[requirement.id] = requirement.value;
+                            newElement[requirement.id] = requirement.getAttribute("type") == "number" ? parseInt(requirement.value) || 0: requirement.value;
                         }
                     });
-                    alert(JSON.stringify(newElement));
 
+                    let reactions = elem.querySelector("#reactions");
+                    Array.from(reactions.querySelectorAll(":scope > div")).forEach(reaction => {
+                        let newReaction = {
+                            is: reaction.querySelector("#is").value,
+                            replaceWith: reaction.querySelector("#replaceWith").value
+                        };
+                        if (reaction.querySelector("#replaceSelf").value) {
+                            newReaction.replaceSelf = reaction.querySelector("#replaceSelf").value || "air";
+                        }
+                        
+                        if (!newElement.reactions) {
+                            newElement.reactions = [];
+                        }
+                        newElement.reactions.push(newReaction);
+                    });
+
+                    let movemment = elem.querySelector(":scope > #movement");
+                    let theMovement;
+                    if (movemment && movemment.querySelector("#movement").value != "null") {
+                        if (movemment.querySelector("#movement").value != "other") {
+                            theMovement = "behaviors." + movemment.querySelector("#movement").value;
+                        } else {
+                            theMovement = [];
+                            let priorities = movemment.querySelector("#other").value.split("/");
+                            for (p in priorities) {
+                                let priority = priorities[p];
+                                let priorContent = priority.split(",");
+                                theMovement.push(priorContent);
+                            }
+                        }
+                    }
+                    if (theMovement) {
+                        newElement.movement = theMovement;
+                    }
+
+                    let explode = elem.querySelector("#explode");
+                    let theExplode = {};
+                    theExplode.size = Number(explode.querySelector("#size").value);
+                    theExplode.trigger = explode.querySelector("#trigger").value;
+                    Array.from(explode.querySelector("#cont").querySelectorAll("input")).forEach(spec => {
+                        if (!theExplode.params) {theExplode.params = {}}
+                        theExplode.params[spec.id] = spec.value;
+                    });
+                    if (theExplode.trigger != "null") {
+                        newElement.explode = theExplode;
+                    }
+
+                    let converts = elem.querySelector("#converts");
+                    Array.from(converts.querySelectorAll("div")).forEach(convert => {
+                        if (!newElement.converts) {newElement.converts = {hot: {}, cold: {}}};
+                        newElement.converts[convert.querySelector("#type").value][Number(convert.querySelector("#temp").value)] = convert.querySelector("#element").value || "air";
+                    });
+                    let compile = JSON.stringify(newElement);
+                    let matchMove = compile.match(/"(behaviors\..+)"/);
+                    if (matchMove) compile = compile.replace(matchMove[0], matchMove[1]);
+
+                    let matchConv = compile.match(/"(\d+)":/);
+                    if (matchConv) compile = compile.replace(matchConv[0], matchConv[1] + ":");
+
+                    compile = "elements." + (elem.querySelector(":scope > #id").value || "example") + " = " + compile;
+                    elementAdd.push(compile);
                 });
-                } catch(e) {alert(e)}
+                
+                mod = categoryAdd.join("\n") + "\n" + elementAdd.join("\n");
+                return mod;
+            }
+            function save() {
+                let saveInfo = {
+                    categories: Array.from(category.querySelectorAll(":scope > div")).map(cate => ({
+                        title: getValue(cate, "#title"),
+                        id: getValue(cate, "#id")
+                    })),
+                    elements: Array.from(element.querySelectorAll(":scope > div")).map(getElementData)
+                };
+                localStorage.setItem("save", JSON.stringify(saveInfo));
+            }
+            function load() {
+                let loadInfo = JSON.parse(localStorage.getItem("save"));
+                if (!loadInfo) return;
+
+                Array.from(category.querySelectorAll(":scope > div")).forEach(cate => cate.remove());
+                Array.from(element.querySelectorAll(":scope > div, :scope > br")).forEach(elem => elem.remove());
+
+                (loadInfo.categories || []).forEach(cateData => {
+                    addCategory();
+                    let cate = category.querySelector(":scope > div:last-child");
+                    setValue(cate, "#title", cateData.title);
+                    setValue(cate, "#id", cateData.id);
+                });
+
+                (loadInfo.elements || []).forEach(elemData => {
+                    addElement();
+                    let elems = Array.from(element.querySelectorAll(":scope > div"));
+                    let elem = elems[elems.length - 1];
+                    setElementData(elem, elemData);
+                });
             }
         </script>
     </body>
